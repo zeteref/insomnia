@@ -130,6 +130,7 @@ export const isParameterSchema = (value: Partial<BodySchema | ParameterSchemas> 
 
 /** see: https://docs.konghq.com/hub/kong-inc/request-validator/#parameters */
 export type RequestValidator = 'request-validator';
+export type ResponseSchema = [{code: string, description: string|undefined, schema?: string}?];
 export interface RequestValidatorPlugin extends PluginBase<RequestValidator> {
   config: {
     /**
@@ -154,6 +155,7 @@ export interface RequestValidatorPlugin extends PluginBase<RequestValidator> {
      * @defaultValue false
      */
     verbose_response?: boolean;
+    response_schema?: ResponseSchema;
   } & RequireAtLeastOne<BodySchema & ParameterSchemas>;
 }
 export const xKongPluginRequestValidator: XKongPluginProperty<RequestValidator> = 'x-kong-plugin-request-validator';
