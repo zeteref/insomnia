@@ -490,9 +490,9 @@ function generateResponses($refs: SwaggerParser.$Refs, operation?: OA3Operation)
           }
         }
 
-        responses.push({code: key, schema: serializeSchemaForKong(schema, components), description: response?.description});
+        responses.push({status: key, schema: serializeSchemaForKong(schema, components), description: response?.description});
     } else {
-      responses.push({code: key, description: response?.description});
+      responses.push({status: key, description: response?.description});
     }
   }
   return responses;
