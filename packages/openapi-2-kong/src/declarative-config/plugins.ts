@@ -460,7 +460,6 @@ export const getRequestValidatorPluginDirective = (segment: XKongPluginRequestVa
   return key ? (segment[key] || {} as RequestValidatorPlugin) : undefined;
 };
 
-
 function resolveRetcodeContent($refs: SwaggerParser.$Refs, retcode?: any): OpenAPIV3.RequestBodyObject | undefined {
   if (!retcode) {
     return;
@@ -480,21 +479,20 @@ function generateResponses($refs: SwaggerParser.$Refs, operation?: OA3Operation)
     const content = response?.content;
     const jsonContentType = 'application/json';
     if (content && content[jsonContentType]) {
-        const { schema, components } = resolveItemSchema($refs, content[jsonContentType]);
+      const { schema, components } = resolveItemSchema($refs, content[jsonContentType]);
 
-        for (const key in schema.properties) {
-          // Append 'null' to property type if nullable true, seeccccc
-          if ((schema.properties[key] as OpenAPIV3.SchemaObject).nullable === true) {
-            // @ts-expect-error this needs some further investigation. 'type' is merely an string literal union, not an array (i.e. tuple) according to the OpenAPI 3 typings for `SchemaObject.type`.
-            schema.properties[key].type = [schema.properties[key].type, 'null'];
-          }
+      for (const key in schema.properties) {
+        // Append 'null' to property type if nullable true, seeccccc
+        if ((schema.properties[key] as OpenAPIV3.SchemaObject).nullable === true) {
+          // @ts-expect-error this needs some further investigation. 'type' is merely an string literal union, not an array (i.e. tuple) according to the OpenAPI 3 typings for `SchemaObject.type`.
+          schema.properties[key].type = [schema.properties[key].type, 'null'];
         }
+      }
 
-        responses.push({status: key, schema: serializeSchemaForKong(schema, components), description: response?.description});
+      responses.push({ status: key, schema: serializeSchemaForKong(schema, components), description: response?.description });
     } else {
-      responses.push({status: key, description: response?.description});
+      responses.push({ status: key, description: response?.description });
     }
   }
   return responses;
 }
-
