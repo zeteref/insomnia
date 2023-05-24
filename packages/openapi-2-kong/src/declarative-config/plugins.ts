@@ -304,6 +304,15 @@ interface ResolvedItemSchema {
   components: OpenAPIV3.ComponentsObject | undefined;
 }
 function resolveItemSchema($refs: SwaggerParser.$Refs, item: OpenAPIV3.MediaTypeObject): ResolvedItemSchema {
+  let components = undefined;
+  // I don't know why resolveComponents originally was only performed wehn '$ref' is in item.schema
+  // we want to do it always to also resolve $refs if item.schema is an array or a complex object that
+  // includes some $ref nested deeply in its properties
+  if (item.schema) {
+    components = resolveComponents($refs, item.schema);
+  }
+  // I cannot just remove '$ref' part of the condition here because then getOperationRef call would
+  // not compile. I think getOperationRef is not really necessary here but i am unsure what exactly is its purpose.
   if (item.schema && '$ref' in item.schema) {
     const schema = getOperationRef<OpenAPIV3.SchemaObject>($refs, item.schema.$ref);
     if (schema) {
@@ -312,7 +321,7 @@ function resolveItemSchema($refs: SwaggerParser.$Refs, item: OpenAPIV3.MediaType
     }
   }
 
-  const hasNoRef = { schema: item.schema as OpenAPIV3.SchemaObject ?? {}, components: undefined };
+  const hasNoRef = { schema: item.schema as OpenAPIV3.SchemaObject ?? {}, components: components};
   return hasNoRef;
 }
 
