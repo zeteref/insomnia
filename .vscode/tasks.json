@@ -17,6 +17,19 @@
       "command": "${workspaceRoot}/packages/insomnia/node_modules/.bin/esr esbuild.main.ts"
     },
     {
+      "label": "Insomnia: Compile openapi-2-kong",
+      "detail": "esbuild.main.ts",
+      "type": "shell",
+      "promptOnClose": false,
+      "options": {
+        "cwd": "${workspaceFolder}/packages/openapi-2-kong",
+        "env": {
+          "NODE_ENV": "development",
+        }
+      },
+      "command": "npm run build"
+    },
+    {
       "label": "Insomnia: Compile Renderer (Watch)",
       "detail": "vite dev",
       "type": "shell",
