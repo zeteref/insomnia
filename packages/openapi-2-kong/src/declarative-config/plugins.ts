@@ -4,7 +4,7 @@ import type { Entry } from 'type-fest';
 
 import { distinctByProperty, getPluginNameFromKey, isPluginKey, sanitizeRegexCapture } from '../common';
 import { DCPlugin } from '../types/declarative-config';
-import { isBodySchema, isParameterSchema, ParameterSchema, RequestValidatorPlugin, XKongPluginRequestValidator, xKongPluginRequestValidator } from '../types/kong';
+import { isBodySchema, isParameterSchema, ParameterSchema, RequestValidatorPlugin, ResponseSchema, XKongPluginRequestValidator, xKongPluginRequestValidator } from '../types/kong';
 import type { OA3Operation, OpenApi3Spec } from '../types/openapi3';
 
 export const isRequestValidatorPluginKey = (property: string): property is typeof xKongPluginRequestValidator => (
@@ -304,6 +304,15 @@ interface ResolvedItemSchema {
   components: OpenAPIV3.ComponentsObject | undefined;
 }
 function resolveItemSchema($refs: SwaggerParser.$Refs, item: OpenAPIV3.MediaTypeObject): ResolvedItemSchema {
+  let components = undefined;
+  // I don't know why resolveComponents originally was only performed wehn '$ref' is in item.schema
+  // we want to do it always to also resolve $refs if item.schema is an array or a complex object that
+  // includes some $ref nested deeply in its properties
+  if (item.schema) {
+    components = resolveComponents($refs, item.schema);
+  }
+  // I cannot just remove '$ref' part of the condition here because then getOperationRef call would
+  // not compile. I think getOperationRef is not really necessary here but i am unsure what exactly is its purpose.
   if (item.schema && '$ref' in item.schema) {
     const schema = getOperationRef<OpenAPIV3.SchemaObject>($refs, item.schema.$ref);
     if (schema) {
@@ -312,7 +321,7 @@ function resolveItemSchema($refs: SwaggerParser.$Refs, item: OpenAPIV3.MediaType
     }
   }
 
-  const hasNoRef = { schema: item.schema as OpenAPIV3.SchemaObject ?? {}, components: undefined };
+  const hasNoRef = { schema: item.schema as OpenAPIV3.SchemaObject ?? {}, components: components};
   return hasNoRef;
 }
 
@@ -344,9 +353,11 @@ export async function generateBodyOptions(api: OpenApi3Spec, operation?: OA3Oper
     }
   }
 
+  const responses = generateResponses($refs, operation);
   return {
     bodySchema,
     allowedContentTypes,
+    responses,
   };
 }
 
@@ -401,6 +412,7 @@ export async function generateRequestValidatorPlugin({
   const isEnabledSpecified = Object.prototype.hasOwnProperty.call(plugin, 'enabled');
   const enabled = isEnabledSpecified ? { enabled: Boolean(plugin.enabled ?? true) } : {};
 
+  config.response_schema = generated.responses;
   const requestValidatorPlugin: RequestValidatorPlugin = {
     name: 'request-validator',
     config: config as RequestValidatorPlugin['config'],
@@ -456,3 +468,40 @@ export const getRequestValidatorPluginDirective = (segment: XKongPluginRequestVa
   // If the key is defined but is blank (therefore should be fully generated) then default to {}, which is truthy.
   return key ? (segment[key] || {} as RequestValidatorPlugin) : undefined;
 };
+
+function resolveRetcodeContent($refs: SwaggerParser.$Refs, retcode?: any): OpenAPIV3.RequestBodyObject | undefined {
+  if (!retcode) {
+    return;
+  }
+
+  if ('$ref' in retcode) {
+    return getOperationRef($refs, retcode.$ref);
+  }
+
+  return retcode;
+}
+
+function generateResponses($refs: SwaggerParser.$Refs, operation?: OA3Operation): ResponseSchema {
+  const responses: ResponseSchema = [];
+  for (const key in operation?.responses) {
+    const response = resolveRetcodeContent($refs, operation?.responses[key]);
+    const content = response?.content;
+    const jsonContentType = 'application/json';
+    if (content && content[jsonContentType]) {
+      const { schema, components } = resolveItemSchema($refs, content[jsonContentType]);
+
+      for (const key in schema.properties) {
+        // Append 'null' to property type if nullable true, seeccccc
+        if ((schema.properties[key] as OpenAPIV3.SchemaObject).nullable === true) {
+          // @ts-expect-error this needs some further investigation. 'type' is merely an string literal union, not an array (i.e. tuple) according to the OpenAPI 3 typings for `SchemaObject.type`.
+          schema.properties[key].type = [schema.properties[key].type, 'null'];
+        }
+      }
+
+      responses.push({ status: key, schema: serializeSchemaForKong(schema, components), description: response?.description });
+    } else {
+      responses.push({ status: key, description: response?.description });
+    }
+  }
+  return responses;
+}
