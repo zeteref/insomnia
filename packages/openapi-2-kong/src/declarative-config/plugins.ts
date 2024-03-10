@@ -412,7 +412,8 @@ export async function generateRequestValidatorPlugin({
   const isEnabledSpecified = Object.prototype.hasOwnProperty.call(plugin, 'enabled');
   const enabled = isEnabledSpecified ? { enabled: Boolean(plugin.enabled ?? true) } : {};
 
-  config.response_schema = generated.responses;
+  config.response_schema = generated.responses.schema;
+  config.response_allowed_content_types = generated.responses.contentTypes;
   const requestValidatorPlugin: RequestValidatorPlugin = {
     name: 'request-validator',
     config: config as RequestValidatorPlugin['config'],
@@ -481,17 +482,17 @@ function resolveRetcodeContent($refs: SwaggerParser.$Refs, retcode?: any): OpenA
   return retcode;
 }
 
-function generateResponses($refs: SwaggerParser.$Refs, operation?: OA3Operation): ResponseSchema {
-  const responseSchema: ResponseSchema = { responses: [], allowed_content_types: [] };
-  responseSchema.responses = [];
+function generateResponses($refs: SwaggerParser.$Refs, operation?: OA3Operation): { schema: ResponseSchema; contentTypes: string[] } {
+  const responses: ResponseSchema = [];
+  let contentTypes: string[] = [];
   for (const key in operation?.responses) {
     const response = resolveRetcodeContent($refs, operation?.responses[key]);
     const content = response?.content;
-    const jsonContentType = 'application/json';
     if (content) {
-      responseSchema.allowed_content_types = Object.keys(content)
+      contentTypes = Object.keys(content)
         .filter(contentType => !contentType.startsWith('x-'));
     }
+    const jsonContentType = 'application/json';
     if (content && content[jsonContentType]) {
       const { schema, components } = resolveItemSchema($refs, content[jsonContentType]);
 
@@ -503,10 +504,10 @@ function generateResponses($refs: SwaggerParser.$Refs, operation?: OA3Operation)
         }
       }
 
-      responseSchema.responses.push({ status: key, schema: serializeSchemaForKong(schema, components), description: response?.description });
+      responses.push({ status: key, schema: serializeSchemaForKong(schema, components), description: response?.description });
     } else {
-      responseSchema.responses.push({ status: key, description: response?.description });
+      responses.push({ status: key, description: response?.description });
     }
   }
-  return responseSchema;
+  return { schema: responses, contentTypes: contentTypes };
 }
