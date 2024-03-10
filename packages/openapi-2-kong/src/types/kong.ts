@@ -165,7 +165,6 @@ export interface RequestValidatorPlugin extends PluginBase<RequestValidator> {
      */
     verbose_response?: boolean;
     response_schema?: ResponseSchema;
-    content_type?: string;
   } & RequireAtLeastOne<BodySchema & ParameterSchemas>;
 }
 export const xKongPluginRequestValidator: XKongPluginProperty<RequestValidator> = 'x-kong-plugin-request-validator';
