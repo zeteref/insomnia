@@ -321,7 +321,7 @@ function resolveItemSchema($refs: SwaggerParser.$Refs, item: OpenAPIV3.MediaType
     }
   }
 
-  const hasNoRef = { schema: item.schema as OpenAPIV3.SchemaObject ?? {}, components: components};
+  const hasNoRef = { schema: item.schema as OpenAPIV3.SchemaObject ?? {}, components: components };
   return hasNoRef;
 }
 
@@ -482,11 +482,16 @@ function resolveRetcodeContent($refs: SwaggerParser.$Refs, retcode?: any): OpenA
 }
 
 function generateResponses($refs: SwaggerParser.$Refs, operation?: OA3Operation): ResponseSchema {
-  const responses: ResponseSchema = [];
+  const responseSchema: ResponseSchema = { responses: [], allowed_content_types: [] };
+  responseSchema.responses = [];
   for (const key in operation?.responses) {
     const response = resolveRetcodeContent($refs, operation?.responses[key]);
     const content = response?.content;
     const jsonContentType = 'application/json';
+    if (content) {
+      responseSchema.allowed_content_types = Object.keys(content)
+        .filter(contentType => !contentType.startsWith('x-'));
+    }
     if (content && content[jsonContentType]) {
       const { schema, components } = resolveItemSchema($refs, content[jsonContentType]);
 
@@ -498,10 +503,10 @@ function generateResponses($refs: SwaggerParser.$Refs, operation?: OA3Operation)
         }
       }
 
-      responses.push({ status: key, schema: serializeSchemaForKong(schema, components), description: response?.description });
+      responseSchema.responses.push({ status: key, schema: serializeSchemaForKong(schema, components), description: response?.description });
     } else {
-      responses.push({ status: key, description: response?.description });
+      responseSchema.responses.push({ status: key, description: response?.description });
     }
   }
-  return responses;
+  return responseSchema;
 }
