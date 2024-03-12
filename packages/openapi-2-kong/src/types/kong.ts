@@ -155,6 +155,7 @@ export interface RequestValidatorPlugin extends PluginBase<RequestValidator> {
      * @defaultValue false
      */
     verbose_response?: boolean;
+    response_schema?: ResponseSchema;
     response_allowed_content_types?: string[];
   } & RequireAtLeastOne<BodySchema & ParameterSchemas>;
 }
