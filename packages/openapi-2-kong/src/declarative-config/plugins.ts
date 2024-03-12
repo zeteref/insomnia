@@ -321,7 +321,7 @@ function resolveItemSchema($refs: SwaggerParser.$Refs, item: OpenAPIV3.MediaType
     }
   }
 
-  const hasNoRef = { schema: item.schema as OpenAPIV3.SchemaObject ?? {}, components: components};
+  const hasNoRef = { schema: item.schema as OpenAPIV3.SchemaObject ?? {}, components: components };
   return hasNoRef;
 }
 
@@ -342,10 +342,14 @@ export async function generateBodyOptions(api: OpenApi3Spec, operation?: OA3Oper
       const { schema, components } = resolveItemSchema($refs, item);
 
       for (const key in schema.properties) {
-        // Append 'null' to property type if nullable true, seeccccc
-        if ((schema.properties[key] as OpenAPIV3.SchemaObject).nullable === true) {
-          // @ts-expect-error this needs some further investigation. 'type' is merely an string literal union, not an array (i.e. tuple) according to the OpenAPI 3 typings for `SchemaObject.type`.
-          schema.properties[key].type = [schema.properties[key].type, 'null'];
+        const property = schema.properties[key] as OpenAPIV3.SchemaObject;
+        if (property.nullable === true) {
+          if (!Array.isArray(property.type)) {
+            // @ts-expect-error this needs some further investigation. 'type' is merely an string literal union, not an array (i.e. tuple) according to the OpenAPI 3 typings for `SchemaObject.type`.
+            property.type = [schema.properties[key].type, 'null'];
+          } else if (!(property.type as string[]).includes('null')) {
+            (property.type as string[]).push('null');
+          }
         }
       }
 
@@ -412,7 +416,8 @@ export async function generateRequestValidatorPlugin({
   const isEnabledSpecified = Object.prototype.hasOwnProperty.call(plugin, 'enabled');
   const enabled = isEnabledSpecified ? { enabled: Boolean(plugin.enabled ?? true) } : {};
 
-  config.response_schema = generated.responses;
+  config.response_schema = generated.responses.schema;
+  config.response_allowed_content_types = generated.responses.contentTypes;
   const requestValidatorPlugin: RequestValidatorPlugin = {
     name: 'request-validator',
     config: config as RequestValidatorPlugin['config'],
@@ -481,20 +486,29 @@ function resolveRetcodeContent($refs: SwaggerParser.$Refs, retcode?: any): OpenA
   return retcode;
 }
 
-function generateResponses($refs: SwaggerParser.$Refs, operation?: OA3Operation): ResponseSchema {
+function generateResponses($refs: SwaggerParser.$Refs, operation?: OA3Operation): { schema: ResponseSchema; contentTypes: string[] } {
   const responses: ResponseSchema = [];
+  let contentTypes: string[] = [];
   for (const key in operation?.responses) {
     const response = resolveRetcodeContent($refs, operation?.responses[key]);
     const content = response?.content;
+    if (content) {
+      contentTypes = Object.keys(content)
+        .filter(contentType => !contentType.startsWith('x-'));
+    }
     const jsonContentType = 'application/json';
     if (content && content[jsonContentType]) {
       const { schema, components } = resolveItemSchema($refs, content[jsonContentType]);
 
       for (const key in schema.properties) {
-        // Append 'null' to property type if nullable true, seeccccc
-        if ((schema.properties[key] as OpenAPIV3.SchemaObject).nullable === true) {
-          // @ts-expect-error this needs some further investigation. 'type' is merely an string literal union, not an array (i.e. tuple) according to the OpenAPI 3 typings for `SchemaObject.type`.
-          schema.properties[key].type = [schema.properties[key].type, 'null'];
+        const property = schema.properties[key] as OpenAPIV3.SchemaObject;
+        if (property.nullable === true) {
+          if (!Array.isArray(property.type)) {
+            // @ts-expect-error this needs some further investigation. 'type' is merely an string literal union, not an array (i.e. tuple) according to the OpenAPI 3 typings for `SchemaObject.type`.
+            property.type = [schema.properties[key].type, 'null'];
+          } else if (!(property.type as string[]).includes('null')) {
+            (property.type as string[]).push('null');
+          }
         }
       }
 
@@ -503,5 +517,5 @@ function generateResponses($refs: SwaggerParser.$Refs, operation?: OA3Operation)
       responses.push({ status: key, description: response?.description });
     }
   }
-  return responses;
+  return { schema: responses, contentTypes: contentTypes };
 }
