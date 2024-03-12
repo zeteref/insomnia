@@ -342,10 +342,14 @@ export async function generateBodyOptions(api: OpenApi3Spec, operation?: OA3Oper
       const { schema, components } = resolveItemSchema($refs, item);
 
       for (const key in schema.properties) {
-        // Append 'null' to property type if nullable true, seeccccc
-        if ((schema.properties[key] as OpenAPIV3.SchemaObject).nullable === true) {
-          // @ts-expect-error this needs some further investigation. 'type' is merely an string literal union, not an array (i.e. tuple) according to the OpenAPI 3 typings for `SchemaObject.type`.
-          schema.properties[key].type = [schema.properties[key].type, 'null'];
+        const property = schema.properties[key] as OpenAPIV3.SchemaObject;
+        if (property.nullable === true) {
+          if (!Array.isArray(property.type)) {
+            // @ts-expect-error this needs some further investigation. 'type' is merely an string literal union, not an array (i.e. tuple) according to the OpenAPI 3 typings for `SchemaObject.type`.
+            property.type = [schema.properties[key].type, 'null'];
+          } else if (!(property.type as string[]).includes('null')) {
+            (property.type as string[]).push('null');
+          }
         }
       }
 
@@ -497,10 +501,14 @@ function generateResponses($refs: SwaggerParser.$Refs, operation?: OA3Operation)
       const { schema, components } = resolveItemSchema($refs, content[jsonContentType]);
 
       for (const key in schema.properties) {
-        // Append 'null' to property type if nullable true, seeccccc
-        if ((schema.properties[key] as OpenAPIV3.SchemaObject).nullable === true) {
-          // @ts-expect-error this needs some further investigation. 'type' is merely an string literal union, not an array (i.e. tuple) according to the OpenAPI 3 typings for `SchemaObject.type`.
-          schema.properties[key].type = [schema.properties[key].type, 'null'];
+        const property = schema.properties[key] as OpenAPIV3.SchemaObject;
+        if (property.nullable === true) {
+          if (!Array.isArray(property.type)) {
+            // @ts-expect-error this needs some further investigation. 'type' is merely an string literal union, not an array (i.e. tuple) according to the OpenAPI 3 typings for `SchemaObject.type`.
+            property.type = [schema.properties[key].type, 'null'];
+          } else if (!(property.type as string[]).includes('null')) {
+            (property.type as string[]).push('null');
+          }
         }
       }
 
