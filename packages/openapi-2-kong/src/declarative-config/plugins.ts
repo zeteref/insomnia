@@ -334,11 +334,10 @@ export async function generateBodyOptions(api: OpenApi3Spec, operation?: OA3Oper
   const bodyContent = requestBody?.content;
 
   if (bodyContent) {
-    const jsonContentType = 'application/json';
     allowedContentTypes = Object.keys(bodyContent);
 
-    if (allowedContentTypes.includes(jsonContentType)) {
-      const item: OpenAPIV3.MediaTypeObject = bodyContent[jsonContentType];
+    if (Object.values(bodyContent).filter(x => x.schema)) {
+      const item: OpenAPIV3.MediaTypeObject = Object.values(bodyContent).filter(x => x.schema)[0];
       const { schema, components } = resolveItemSchema($refs, item);
 
       for (const key in schema.properties) {
@@ -496,9 +495,8 @@ function generateResponses($refs: SwaggerParser.$Refs, operation?: OA3Operation)
       contentTypes = Object.keys(content)
         .filter(contentType => !contentType.startsWith('x-'));
     }
-    const jsonContentType = 'application/json';
-    if (content && content[jsonContentType]) {
-      const { schema, components } = resolveItemSchema($refs, content[jsonContentType]);
+    if (content && Object.values(content).filter(x => x.schema)) {
+      const { schema, components } = resolveItemSchema($refs, Object.values(content).filter(x => x.schema)[0]);
 
       for (const key in schema.properties) {
         const property = schema.properties[key] as OpenAPIV3.SchemaObject;
