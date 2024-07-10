@@ -335,6 +335,13 @@ export async function generateBodyOptions(api: OpenApi3Spec, operation?: OA3Oper
 
   if (bodyContent) {
     allowedContentTypes = Object.keys(bodyContent);
+    allowedContentTypes.push(
+      ...Object.entries(bodyContent)
+        .filter(([key, val]) => key.startsWith('multipart') && val.encoding)
+        .flatMap(([_, multipart]) => Object.entries(multipart.encoding ?? {}))
+        .filter(([_, multipartDef]) => multipartDef && multipartDef.contentType)
+        .map(([multipartName, multipartDef]) => multipartName + '|' + multipartDef.contentType)
+    );
 
     if (Object.values(bodyContent).filter(x => x.schema)) {
       const item: OpenAPIV3.MediaTypeObject = Object.values(bodyContent).filter(x => x.schema)[0];
@@ -487,14 +494,18 @@ function resolveRetcodeContent($refs: SwaggerParser.$Refs, retcode?: any): OpenA
 
 function generateResponses($refs: SwaggerParser.$Refs, operation?: OA3Operation): { schema: ResponseSchema; contentTypes: string[] } {
   const responses: ResponseSchema = [];
-  let contentTypes: string[] = [];
+  const contentTypes: string[] = [];
   for (const key in operation?.responses) {
     const response = resolveRetcodeContent($refs, operation?.responses[key]);
     const content = response?.content;
-    if (content) {
-      contentTypes = Object.keys(content)
-        .filter(contentType => !contentType.startsWith('x-'));
-    }
+    contentTypes.push(...Object.keys(content ?? {}).filter(x => !x.startsWith('x-')));
+    contentTypes.push(
+      ...Object.entries(content ?? {})
+        .filter(([key, multipart]) => key.startsWith('multipart') && multipart.encoding)
+        .flatMap(([_, multipart]) => Object.entries(multipart.encoding ?? {}))
+        .filter(([_, multipartDef]) => multipartDef && multipartDef.contentType)
+        .map(([multipartName, multipartDef]) => multipartName + '|' + multipartDef.contentType)
+    );
     if (content && Object.values(content).filter(x => x.schema)) {
       const { schema, components } = resolveItemSchema($refs, Object.values(content).filter(x => x.schema)[0]);
 
