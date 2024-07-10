@@ -337,10 +337,10 @@ export async function generateBodyOptions(api: OpenApi3Spec, operation?: OA3Oper
     allowedContentTypes = Object.keys(bodyContent);
     allowedContentTypes.push(
       ...Object.entries(bodyContent)
-        .filter(([key, val]) => key.startsWith('multipart') && val.encoding)
-        .flatMap(([_, multipart]) => Object.entries(multipart.encoding ?? {}))
-        .filter(([_, multipartDef]) => multipartDef && multipartDef.contentType)
-        .map(([multipartName, multipartDef]) => multipartName + '|' + multipartDef.contentType)
+        .filter(([key, multipart]) => key.startsWith('multipart') && multipart.encoding)
+        .flatMap(([key, multipart]) => Object.entries(multipart.encoding ?? {}).map((x): [string, OpenAPIV3.EncodingObject, string] => [...x, key]))
+        .filter(([_, multipartDef, _key]) => multipartDef && multipartDef.contentType)
+        .map(([multipartName, multipartDef, key]) => key + '|' + multipartName + '|' + multipartDef.contentType)
     );
 
     if (Object.values(bodyContent).filter(x => x.schema)) {
@@ -502,9 +502,9 @@ function generateResponses($refs: SwaggerParser.$Refs, operation?: OA3Operation)
     contentTypes.push(
       ...Object.entries(content ?? {})
         .filter(([key, multipart]) => key.startsWith('multipart') && multipart.encoding)
-        .flatMap(([_, multipart]) => Object.entries(multipart.encoding ?? {}))
-        .filter(([_, multipartDef]) => multipartDef && multipartDef.contentType)
-        .map(([multipartName, multipartDef]) => multipartName + '|' + multipartDef.contentType)
+        .flatMap(([key, multipart]) => Object.entries(multipart.encoding ?? {}).map((x): [string, OpenAPIV3.EncodingObject, string] => [...x, key]))
+        .filter(([_, multipartDef, _key]) => multipartDef && multipartDef.contentType)
+        .map(([multipartName, multipartDef, key]) => key + '|' + multipartName + '|' + multipartDef.contentType)
     );
     if (content && Object.values(content).filter(x => x.schema)) {
       const { schema, components } = resolveItemSchema($refs, Object.values(content).filter(x => x.schema)[0]);
