@@ -335,13 +335,7 @@ export async function generateBodyOptions(api: OpenApi3Spec, operation?: OA3Oper
 
   if (bodyContent) {
     allowedContentTypes = Object.keys(bodyContent);
-    allowedContentTypes.push(
-      ...Object.entries(bodyContent)
-        .filter(([key, multipart]) => key.startsWith('multipart') && multipart.encoding)
-        .flatMap(([key, multipart]) => Object.entries(multipart.encoding ?? {}).map((x): [string, OpenAPIV3.EncodingObject, string] => [...x, key]))
-        .filter(([_, multipartDef, _key]) => multipartDef && multipartDef.contentType)
-        .map(([multipartName, multipartDef, key]) => key + '|' + multipartName + '|' + multipartDef.contentType)
-    );
+    allowedContentTypes.push(...extractMultipartContentTypes(bodyContent));
 
     if (Object.values(bodyContent).filter(x => x.schema)) {
       const item: OpenAPIV3.MediaTypeObject = Object.values(bodyContent).filter(x => x.schema)[0];
@@ -499,13 +493,7 @@ function generateResponses($refs: SwaggerParser.$Refs, operation?: OA3Operation)
     const response = resolveRetcodeContent($refs, operation?.responses[key]);
     const content = response?.content;
     contentTypes.push(...Object.keys(content ?? {}).filter(x => !x.startsWith('x-')));
-    contentTypes.push(
-      ...Object.entries(content ?? {})
-        .filter(([key, multipart]) => key.startsWith('multipart') && multipart.encoding)
-        .flatMap(([key, multipart]) => Object.entries(multipart.encoding ?? {}).map((x): [string, OpenAPIV3.EncodingObject, string] => [...x, key]))
-        .filter(([_, multipartDef, _key]) => multipartDef && multipartDef.contentType)
-        .map(([multipartName, multipartDef, key]) => key + '|' + multipartName + '|' + multipartDef.contentType)
-    );
+    contentTypes.push(...extractMultipartContentTypes(content ?? {}));
     if (content && Object.values(content).filter(x => x.schema)) {
       const { schema, components } = resolveItemSchema($refs, Object.values(content).filter(x => x.schema)[0]);
 
@@ -527,4 +515,38 @@ function generateResponses($refs: SwaggerParser.$Refs, operation?: OA3Operation)
     }
   }
   return { schema: responses, contentTypes: contentTypes };
+}
+
+function extractMultipartContentTypes(content: {[media: string]: OpenAPIV3.MediaTypeObject}) {
+  /*
+    *** Result of processing the following content:
+    content:
+      multipart/mixed:
+        schema:
+          type: object
+          additionalProperties: false
+          required:
+            - metric
+            - content
+          properties:
+            metric:
+              type: object
+            content:
+              type: string
+              maxLength: 26214400
+              pattern: (.*?)
+              format: binary
+        encoding:
+          metric:
+            contentType: application/json
+          content:
+            contentType: application/octet-stream
+    *** Shold be:
+    ['multipart/mixed|metric|application/json', 'multipart/mixed|content|application/octet-stream']
+  */
+  return Object.entries(content ?? {})
+    .filter(([key, multipart]) => key.startsWith('multipart') && multipart.encoding)
+    .flatMap(([key, multipart]) => Object.entries(multipart.encoding ?? {}).map((x): [string, OpenAPIV3.EncodingObject, string] => [...x, key]))
+    .filter(([_, multipartDef, _key]) => multipartDef && multipartDef.contentType)
+    .map(([propertyName, multipartDef, key]) => key + '|' + propertyName + '|' + multipartDef.contentType);
 }
