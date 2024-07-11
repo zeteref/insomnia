@@ -546,7 +546,10 @@ function extractMultipartContentTypes(content: {[media: string]: OpenAPIV3.Media
   */
   return Object.entries(content ?? {})
     .filter(([key, multipart]) => key.startsWith('multipart') && multipart.encoding)
-    .flatMap(([key, multipart]) => Object.entries(multipart.encoding ?? {}).map((x): [string, OpenAPIV3.EncodingObject, string] => [...x, key]))
+    .flatMap(([key, multipart]) =>
+      Object.entries(multipart.encoding ?? {})
+        .map((x): [string, OpenAPIV3.EncodingObject, string] => [...x, key])
+    )
     .filter(([_, multipartDef, _key]) => multipartDef && multipartDef.contentType)
     .map(([propertyName, multipartDef, key]) => key + '|' + propertyName + '|' + multipartDef.contentType);
 }
