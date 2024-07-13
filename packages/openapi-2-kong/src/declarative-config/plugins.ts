@@ -337,7 +337,7 @@ export async function generateBodyOptions(api: OpenApi3Spec, operation?: OA3Oper
     allowedContentTypes = Object.keys(bodyContent);
     allowedContentTypes.push(...extractMultipartContentTypes(bodyContent));
 
-    if (Object.values(bodyContent).filter(x => x.schema)) {
+    if (Object.values(bodyContent).filter(x => x.schema).length > 0) {
       const item: OpenAPIV3.MediaTypeObject = Object.values(bodyContent).filter(x => x.schema)[0];
       const { schema, components } = resolveItemSchema($refs, item);
 
@@ -494,7 +494,7 @@ function generateResponses($refs: SwaggerParser.$Refs, operation?: OA3Operation)
     const content = response?.content;
     contentTypes.push(...Object.keys(content ?? {}).filter(x => !x.startsWith('x-')));
     contentTypes.push(...extractMultipartContentTypes(content ?? {}));
-    if (content && Object.values(content).filter(x => x.schema)) {
+    if (content && Object.values(content).filter(x => x.schema).length > 0) {
       const { schema, components } = resolveItemSchema($refs, Object.values(content).filter(x => x.schema)[0]);
 
       for (const key in schema.properties) {
