@@ -67,7 +67,7 @@
       "autoAttachChildProcesses": true,
       "trace": true,
       "preLaunchTask": "Insomnia: Compile openapi-2-kong",
-      "args": ["generate", "config", "${input:insoCommandArgs}"],
+      "args": ["--verbose", "generate", "config", "${input:insoCommandArgs}"],
       "console": "integratedTerminal"
     }
   ],
