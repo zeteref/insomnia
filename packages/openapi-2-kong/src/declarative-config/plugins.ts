@@ -514,7 +514,7 @@ function generateResponses($refs: SwaggerParser.$Refs, operation?: OA3Operation)
       responses.push({ status: key, description: response?.description });
     }
   }
-  return { schema: responses, contentTypes: contentTypes };
+  return { schema: responses, contentTypes: Array.from(new Set(contentTypes))};
 }
 
 function extractMultipartContentTypes(content: {[media: string]: OpenAPIV3.MediaTypeObject}) {
