@@ -531,6 +531,8 @@ function extractMultipartContentTypes(content: {[media: string]: OpenAPIV3.Media
           properties:
             metric:
               type: object
+            id:
+              type: integer
             content:
               type: string
               maxLength: 26214400
@@ -542,14 +544,49 @@ function extractMultipartContentTypes(content: {[media: string]: OpenAPIV3.Media
           content:
             contentType: application/octet-stream
     *** Shold be:
-    ['multipart/mixed|metric|application/json', 'multipart/mixed|content|application/octet-stream']
+    ['multipart/mixed|metric|application/json', 'multipart/mixed|content|application/octet-stream', 'multipart/mixed|id|text/plain']
   */
   return Object.entries(content ?? {})
-    .filter(([key, multipart]) => key.startsWith('multipart') && multipart.encoding)
-    .flatMap(([key, multipart]) =>
-      Object.entries(multipart.encoding ?? {})
-        .map((x): [string, OpenAPIV3.EncodingObject, string] => [...x, key])
+    .filter(([key, _]) => key.startsWith('multipart'))
+    .flatMap(([key, multipart]) => {
+      const schema = multipart.schema ?? {};
+      const encoding = multipart.encoding ?? {};
+
+      const customProperties = Object.entries(encoding)
+        .filter(([_, property]) => property.contentType)
+        .flatMap(([key, _]) => key)
+      
+      const properties: OpenAPIV3.SchemaObject = 
+        '$ref' in schema
+          ? {} 
+          : schema.properties ?? {}
+
+      const defaultProperties = Object.keys(properties)
+        .filter(x => !customProperties.includes(x))
+
+      function defaultContentType(schema: any) {
+        // https://swagger.io/docs/specification/describing-request-body/multipart-requests/
+        switch(schema.type) {
+          case 'object': 
+            return 'application/json';
+          case 'array':
+            const items: OpenAPIV3.SchemaObject = '$ref' in schema.items ? {} : schema.items;
+            return ['array', 'object'].includes(items.type ?? 'object') ? 'application/json' : 'text/plain';
+          case 'string':
+            return ['binary', 'base64'].includes(schema.format) ? 'application/octet-stream' : 'text/plain';
+          default:
+            return 'text/plain';
+        }
+      }
+      
+      return [
+          ...customProperties
+            .map((name) => [name, encoding[name].contentType, key]),
+          ...defaultProperties
+            .map((name) => [name, defaultContentType((properties as any)[name]), key]),
+        ]
+      }
     )
-    .filter(([_, multipartDef, _key]) => multipartDef && multipartDef.contentType)
-    .map(([propertyName, multipartDef, key]) => key + '|' + propertyName + '|' + multipartDef.contentType);
+    .filter(([_, contentType, _key]) => contentType != "")
+    .map(([propertyName, contentType, key]) => key + '|' + propertyName + '|' + contentType);
 }
