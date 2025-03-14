@@ -4,7 +4,7 @@ import type { Entry } from 'type-fest';
 
 import { distinctByProperty, getPluginNameFromKey, isPluginKey, sanitizeRegexCapture } from '../common';
 import { DCPlugin } from '../types/declarative-config';
-import { isBodySchema, isParameterSchema, ParameterSchema, RequestValidatorPlugin, ResponseSchema, XKongPluginRequestValidator, xKongPluginRequestValidator } from '../types/kong';
+import { isBodySchema, isParameterSchema, ParameterSchema, ParameterSchemaX, RequestValidatorPlugin, ResponseSchema, XKongPluginRequestValidator, xKongPluginRequestValidator } from '../types/kong';
 import type { OA3Operation, OpenApi3Spec } from '../types/openapi3';
 
 export const isRequestValidatorPluginKey = (property: string): property is typeof xKongPluginRequestValidator => (
@@ -135,6 +135,17 @@ const generateParameterSchema = async (api: OpenApi3Spec, operation?: OA3Operati
       throw new Error(`invalid 'in' property (parameter '${name}')`);
     }
 
+    let x_options: ParameterSchemaX = {};
+    Object.entries(resolvedParam).forEach(([key, value]) => {
+      if (key.startsWith('x-')) {
+        x_options[`x-${key.slice(2)}`] = value;
+      }
+
+      if (key.startsWith('X-')) {
+        x_options[`X-${key.slice(2)}`] = value;
+      }
+    })
+
     const parameterSchema: ParameterSchema = {
       in: resolvedParam.in,
       explode: !!resolvedParam.explode,
@@ -142,6 +153,7 @@ const generateParameterSchema = async (api: OpenApi3Spec, operation?: OA3Operati
       name: resolvedParam.name,
       schema,
       style: paramStyle,
+      ...x_options
     };
     parameterSchemas.push(parameterSchema);
   }

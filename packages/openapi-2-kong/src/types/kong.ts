@@ -110,8 +110,16 @@ Permalink
   explode: boolean;
 }
 
+export interface ParameterSchemaX {
+  [key: `x-${string}`]: string;
+  [key: `X-${string}`]: string;
+}
+
+
 /** see: https://docs.konghq.com/hub/kong-inc/request-validator/#parameter-schema-definition */
-export type ParameterSchema = ParameterSchemaRequired | (ParameterSchemaRequired & ParameterSchemaOptional);
+export type ParameterSchemaBase = ParameterSchemaRequired | (ParameterSchemaRequired & ParameterSchemaOptional);
+
+export type ParameterSchema = ParameterSchemaBase | (ParameterSchemaBase & ParameterSchemaX)
 
 export interface ParameterSchemas {
   /**
