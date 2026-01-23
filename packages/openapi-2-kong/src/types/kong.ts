@@ -138,7 +138,7 @@ export const isParameterSchema = (value: Partial<BodySchema | ParameterSchemas> 
 
 /** see: https://docs.konghq.com/hub/kong-inc/request-validator/#parameters */
 export type RequestValidator = 'request-validator';
-export type ResponseSchema = [{status: string; description: string | undefined; schema?: string; auto_added?: boolean}?];
+export type ResponseSchema = [{status: string; description: string | undefined; schema?: string; auto_added?: boolean; allowed_content_types: string}?];
 export interface RequestValidatorPlugin extends PluginBase<RequestValidator> {
   config: {
     /**

@@ -429,7 +429,6 @@ export async function generateRequestValidatorPlugin({
   const enabled = isEnabledSpecified ? { enabled: Boolean(plugin.enabled ?? true) } : {};
 
   config.response_schema = generated.responses.schema;
-  config.response_allowed_content_types = generated.responses.contentTypes;
   const requestValidatorPlugin: RequestValidatorPlugin = {
     name: 'request-validator',
     config: config as RequestValidatorPlugin['config'],
@@ -498,11 +497,11 @@ function resolveRetcodeContent($refs: SwaggerParser.$Refs, retcode?: any): OpenA
   return retcode;
 }
 
-function generateResponses($refs: SwaggerParser.$Refs, operation?: OA3Operation): { schema: ResponseSchema; contentTypes: string[] } {
+function generateResponses($refs: SwaggerParser.$Refs, operation?: OA3Operation): { schema: ResponseSchema; contentTypes?: string[] } {
   const responses: ResponseSchema = [];
-  const contentTypes: string[] = [];
   for (const key in operation?.responses) {
     const openapiResponse = resolveRetcodeContent($refs, operation?.responses[key]);
+    const contentTypes: string[] = [];
     if (!openapiResponse) {
       continue;
     }
@@ -528,14 +527,17 @@ function generateResponses($refs: SwaggerParser.$Refs, operation?: OA3Operation)
 
       responseSchema = { status: key, schema: serializeSchemaForKong(schema, components), description: openapiResponse?.description};
     } else {
-      responseSchema = { status: key, description: openapiResponse?.description };
+      responseSchema = { status: key, description: openapiResponse?.description};
     }
     if (openapiResponse.auto_added) {
       responseSchema.auto_added = true;
     }
+    if (contentTypes.length > 0) {
+      responseSchema.allowed_content_types = contentTypes;
+    }
     responses.push(responseSchema)
   }
-  return { schema: responses, contentTypes: Array.from(new Set(contentTypes))};
+  return { schema: responses };
 }
 
 function extractMultipartContentTypes(content: {[media: string]: OpenAPIV3.MediaTypeObject}) {
