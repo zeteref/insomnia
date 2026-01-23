@@ -502,10 +502,15 @@ function generateResponses($refs: SwaggerParser.$Refs, operation?: OA3Operation)
   const responses: ResponseSchema = [];
   const contentTypes: string[] = [];
   for (const key in operation?.responses) {
-    const response = resolveRetcodeContent($refs, operation?.responses[key]);
-    const content = response?.content;
+    const openapiResponse = resolveRetcodeContent($refs, operation?.responses[key]);
+    if (!openapiResponse) {
+      continue;
+    }
+    openapiResponse.auto_added = (operation?.responses[key] as any)?.['x-auto-added'];
+    const content = openapiResponse?.content;
     contentTypes.push(...Object.keys(content ?? {}).filter(x => !x.startsWith('x-')));
     contentTypes.push(...extractMultipartContentTypes(content ?? {}));
+    let responseSchema: any = undefined;
     if (content && Object.values(content).filter(x => x.schema).length > 0) {
       const { schema, components } = resolveItemSchema($refs, Object.values(content).filter(x => x.schema)[0]);
 
@@ -521,10 +526,14 @@ function generateResponses($refs: SwaggerParser.$Refs, operation?: OA3Operation)
         }
       }
 
-      responses.push({ status: key, schema: serializeSchemaForKong(schema, components), description: response?.description });
+      responseSchema = { status: key, schema: serializeSchemaForKong(schema, components), description: openapiResponse?.description};
     } else {
-      responses.push({ status: key, description: response?.description });
+      responseSchema = { status: key, description: openapiResponse?.description };
     }
+    if (openapiResponse.auto_added) {
+      responseSchema.auto_added = true;
+    }
+    responses.push(responseSchema)
   }
   return { schema: responses, contentTypes: Array.from(new Set(contentTypes))};
 }
