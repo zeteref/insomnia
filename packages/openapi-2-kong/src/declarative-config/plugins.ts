@@ -497,10 +497,15 @@ function resolveRetcodeContent($refs: SwaggerParser.$Refs, retcode?: any): OpenA
   return retcode;
 }
 
+
 function generateResponses($refs: SwaggerParser.$Refs, operation?: OA3Operation): { schema: ResponseSchema; contentTypes?: string[] } {
+  interface RequestBodyObject extends OpenAPIV3.ResponseObject {
+    auto_added?: boolean;
+  }
+
   const responses: ResponseSchema = [];
   for (const key in operation?.responses) {
-    const openapiResponse = resolveRetcodeContent($refs, operation?.responses[key]);
+    const openapiResponse: RequestBodyObject = resolveRetcodeContent($refs, operation?.responses[key]) as RequestBodyObject;
     const contentTypes: string[] = [];
     if (!openapiResponse) {
       continue;
